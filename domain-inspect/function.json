@@ -16,5 +16,5 @@
       "name": "res"
     }
   ],
-  "scriptFile": "../dist/helloTrigger/index.js"
+  "scriptFile": "../dist/domain-inspect/index.js"
 }
