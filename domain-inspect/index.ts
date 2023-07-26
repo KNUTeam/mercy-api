@@ -1,17 +1,21 @@
-import { AzureFunction, Context, HttpRequest } from "@azure/functions"
+import { AzureFunction, Context, HttpRequest } from "@azure/functions";
+import getCosmosDatabase from "../common/cosmosdb/getCosmosDatabase";
 
-const httpTrigger: AzureFunction = async function (context: Context, req: HttpRequest): Promise<void> {
-    context.log('HTTP trigger function processed a request.');
-    const name = (req.query.name || (req.body && req.body.name));
-    const responseMessage = name
-        ? "Hello, " + name + ". This HTTP triggered function executed successfully."
-        : "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response.";
+const httpTrigger: AzureFunction = async function (
+  context: Context,
+  req: HttpRequest
+): Promise<void> {
+  const db = await getCosmosDatabase({
+    databaseName: "DomainIntrospect",
+    primaryKey: process.env.AZURE_COSMOS_DB_PKEY,
+    secondaryKey: process.env.AZURE_COSMOS_DB_SKEY,
+    endpoint: process.env.AZURE_COSMOS_DB_URL,
+  });
 
-    context.res = {
-        // status: 200, /* Defaults to 200 */
-        body: responseMessage
-    };
-
+  context.res = {
+    // status: 200, /* Defaults to 200 */
+    body: "cosmos 디비 연결 됨",
+  };
 };
 
 export default httpTrigger;
