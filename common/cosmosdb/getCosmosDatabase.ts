@@ -12,17 +12,15 @@ async function getCosmosDatabase({
   primaryKey,
   secondaryKey,
   databaseName,
-}: GetCosmosClientParams): Promise<Database> {
+}: GetCosmosClientParams) {
   const cosmosClient = new CosmosClient({
     endpoint,
     key: primaryKey ? primaryKey : secondaryKey,
   });
 
-  const { database } = await cosmosClient.databases.createIfNotExists({
+  return cosmosClient.databases.createIfNotExists({
     id: databaseName,
   });
-
-  return database;
 }
 
 export default getCosmosDatabase;

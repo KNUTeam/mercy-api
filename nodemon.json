@@ -1,5 +1,5 @@
 {
-  "watch": ["domain-inspect"],
+  "watch": ["domain-inspect", "common"],
   "exec": "npm run build && func start --verbose --typescript",
   "ext": "js, json, ts, proto"
 }
