@@ -1,41 +1,84 @@
-import { AzureFunction, Context, HttpRequest } from "@azure/functions";
+import { HttpRequest } from "@azure/functions";
 import { plainToInstance } from "class-transformer";
 import { validateOrReject } from "class-validator";
 import InspectionResultModel from "../common/cosmosdb/models/InspectionResult";
-import getDomainReport from "../common/virustotal/getDomainReport";
 import { DomainIntrospectRequestDto } from "./dtos/DomainIntrospectRequest.dto";
+import { DomainIntrospectResponseDto } from "./dtos/DomainIntrospectResponse.dto";
+import ehr from "../common/utils/ehr";
+import { differenceInDays } from "date-fns";
+import getDomainReport from "../common/virustotal/getDomainReport";
+import { EDomainReportResult } from "../common/enums/VirusTotal.enum";
 
-const httpTrigger: AzureFunction = async function (
-  context: Context,
-  req: HttpRequest
-): Promise<void> {
+async function domainIntrospectService(
+  dto: DomainIntrospectRequestDto
+): Promise<DomainIntrospectResponseDto> {
   // 필요한 모델 초기화
   const InspectionResult = new InspectionResultModel();
   await Promise.all([InspectionResult.init()]);
 
-  // 입력 초기화
-  const domainIntrospectDto = plainToInstance(
-    DomainIntrospectRequestDto,
-    req.body
-  );
-  await validateOrReject(domainIntrospectDto);
+  const url = new URL(dto.targetURL);
 
-  // DB 에서 이 URL 에 대해 검증된 캐시가 있는지 확인
-  const { targetURL } = domainIntrospectDto;
-  const url = new URL(targetURL);
-  const item = await InspectionResult.findByHostName(url.hostname);
+  // 디비에 캐싱된 데이터가 있는지 확인
+  const items = await InspectionResult.findByHostName(url.hostname);
+  if (items.length > 0) {
+    items.sort(
+      (a, b) =>
+        new Date(b.AnalysisDate).getTime() - new Date(a.AnalysisDate).getTime()
+    );
 
-  if (item.length > 0) {
-    context.res = {
-      status: 200,
-      body: item[0],
-    };
+    const lastAnalysisDate = new Date(items[0].AnalysisDate);
+    if (differenceInDays(new Date(), lastAnalysisDate) < 90) {
+      // 마지막 분석 후 90일이 지나지 않았을 때만 캐싱된 데이터 이용
+      return plainToInstance(DomainIntrospectResponseDto, {
+        HostName: items[0].HostName,
+        MaliciousScore: items[0].MaliciousScore,
+        AnalysisDate: items[0].AnalysisDate,
+      });
+    }
   }
 
-  context.res = {
-    status: 200,
-    body: "virustotal 요청 보내서 디비 넣는 작업 예정",
-  };
-};
+  let maliciousScore = 0;
+  const now = new Date();
+  const domainReportDtos = await getDomainReport(url.hostname);
+  for (const { result } of domainReportDtos) {
+    switch (result) {
+      case EDomainReportResult.PHISHING:
+        maliciousScore += 10;
+        break;
+      case EDomainReportResult.MALICIOUS:
+        maliciousScore += 1;
+        break;
+      case EDomainReportResult.UNRATED:
+        maliciousScore += 0.1;
+        break;
+    }
+  }
 
-export default httpTrigger;
+  // 디비에 캐싱
+  await InspectionResult.createInspectResult({
+    HostName: url.hostname,
+    MaliciousScore: maliciousScore,
+    AnalysisDate: now,
+  });
+
+  return plainToInstance(DomainIntrospectResponseDto, {
+    HostName: url.hostname,
+    MaliciousScore: maliciousScore,
+    AnalysisDate: now,
+  });
+}
+
+async function domainIntrospectDtoGen(
+  req: HttpRequest
+): Promise<DomainIntrospectRequestDto> {
+  // 입력 초기화
+  const dto = plainToInstance(DomainIntrospectRequestDto, req.body);
+  await validateOrReject(dto);
+
+  return dto;
+}
+
+export default ehr<DomainIntrospectRequestDto, DomainIntrospectResponseDto>(
+  domainIntrospectService,
+  domainIntrospectDtoGen
+);
