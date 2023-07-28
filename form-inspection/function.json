@@ -5,7 +5,10 @@
       "type": "httpTrigger",
       "direction": "in",
       "name": "req",
-      "methods": ["post"]
+      "methods": [
+        "get",
+        "post"
+      ]
     },
     {
       "type": "http",
@@ -13,5 +16,5 @@
       "name": "res"
     }
   ],
-  "scriptFile": "../dist/domain-introspect/index.js"
+  "scriptFile": "../dist/form-inspection/index.js"
 }

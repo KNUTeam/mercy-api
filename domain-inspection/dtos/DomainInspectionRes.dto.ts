@@ -1,6 +1,6 @@
 import { IsDate, IsNumber, IsString } from "class-validator";
 
-export class DomainIntrospectResponseDto {
+export class DomainInspectionResDto {
   @IsString()
   HostName: string;
 

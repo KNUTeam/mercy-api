@@ -2,16 +2,16 @@ import { HttpRequest } from "@azure/functions";
 import { plainToInstance } from "class-transformer";
 import { validateOrReject } from "class-validator";
 import InspectionResultModel from "../common/cosmosdb/models/InspectionResult";
-import { DomainIntrospectRequestDto } from "./dtos/DomainIntrospectRequest.dto";
-import { DomainIntrospectResponseDto } from "./dtos/DomainIntrospectResponse.dto";
-import ehr from "../common/utils/ehr";
 import { differenceInDays } from "date-fns";
 import getDomainReport from "../common/virustotal/getDomainReport";
 import { EDomainReportResult } from "../common/enums/VirusTotal.enum";
+import { DomainInspectionReqDto } from "./dtos/DomainInspectionReq.dto";
+import { DomainInspectionResDto } from "./dtos/DomainInspectionRes.dto";
+import ehr from "../common/utils/ehr";
 
 async function domainIntrospectService(
-  dto: DomainIntrospectRequestDto
-): Promise<DomainIntrospectResponseDto> {
+  dto: DomainInspectionReqDto
+): Promise<DomainInspectionResDto> {
   // 필요한 모델 초기화
   const InspectionResult = new InspectionResultModel();
   await Promise.all([InspectionResult.init()]);
@@ -29,7 +29,7 @@ async function domainIntrospectService(
     const lastAnalysisDate = new Date(items[0].AnalysisDate);
     if (differenceInDays(new Date(), lastAnalysisDate) < 90) {
       // 마지막 분석 후 90일이 지나지 않았을 때만 캐싱된 데이터 이용
-      return plainToInstance(DomainIntrospectResponseDto, {
+      return plainToInstance(DomainInspectionResDto, {
         HostName: items[0].HostName,
         MaliciousScore: items[0].MaliciousScore,
         AnalysisDate: items[0].AnalysisDate,
@@ -61,7 +61,7 @@ async function domainIntrospectService(
     AnalysisDate: now,
   });
 
-  return plainToInstance(DomainIntrospectResponseDto, {
+  return plainToInstance(DomainInspectionResDto, {
     HostName: url.hostname,
     MaliciousScore: maliciousScore,
     AnalysisDate: now,
@@ -70,15 +70,15 @@ async function domainIntrospectService(
 
 async function domainIntrospectDtoGen(
   req: HttpRequest
-): Promise<DomainIntrospectRequestDto> {
+): Promise<DomainInspectionReqDto> {
   // 입력 초기화
-  const dto = plainToInstance(DomainIntrospectRequestDto, req.body);
+  const dto = plainToInstance(DomainInspectionReqDto, req.body);
   await validateOrReject(dto);
 
   return dto;
 }
 
-export default ehr<DomainIntrospectRequestDto, DomainIntrospectResponseDto>(
+export default ehr<DomainInspectionReqDto, DomainInspectionResDto>(
   domainIntrospectService,
   domainIntrospectDtoGen
 );

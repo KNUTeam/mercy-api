@@ -1,6 +1,6 @@
 import { IsUrl } from "class-validator";
 
-export class DomainIntrospectRequestDto {
+export class DomainInspectionReqDto {
   @IsUrl()
   targetURL: string;
 }
