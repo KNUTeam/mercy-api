@@ -2,7 +2,7 @@ import { IsDate, IsNumber, IsString } from "class-validator";
 
 export class DomainInspectionResDto {
   @IsString()
-  HostName: string;
+  Domain: string;
 
   @IsNumber()
   MaliciousScore: number;

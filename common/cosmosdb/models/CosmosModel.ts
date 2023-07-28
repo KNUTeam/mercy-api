@@ -4,6 +4,7 @@ import {
   FeedOptions,
   SqlQuerySpec,
 } from "@azure/cosmos";
+import { Snowflake } from "nodejs-snowflake";
 import getCosmosContainer from "../getCosmosContainer";
 import getCosmosDatabase from "../getCosmosDatabase";
 
@@ -36,6 +37,11 @@ abstract class CosmosModel {
 
   public async query(query: string | SqlQuerySpec, options?: FeedOptions) {
     return this.container.items.query(query, options).fetchAll();
+  }
+
+  public generateUID() {
+    const uid = new Snowflake();
+    return String(uid.getUniqueID());
   }
 
   get database() {
