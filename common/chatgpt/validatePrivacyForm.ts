@@ -22,19 +22,12 @@ async function validatePrivacyForm(
   });
   const openai = new OpenAIApi(conf);
 
-  console.log([
-    {
-      role: "system",
-      content: `{ \"IsPrivacyForm\": boolean,  \"PrivacyFields\": string[] }\n\n${html}\n\nHTML 보고 JSON 채워 줘, IsPrivacyForm 폼이 개인정보를 요구하는지 여부, PrivacyFields 요구한다면 어떤 값을 요구하는지\n`,
-    },
-  ]);
-
   const response = await openai.createChatCompletion({
     model: "gpt-3.5-turbo",
     messages: [
       {
-        role: "system",
-        content: `{ \"IsPrivacyForm\": boolean,  \"PrivacyFields\": string[] }\n\n${html}\n\nHTML 보고 JSON 채워 줘, IsPrivacyForm 폼이 개인정보를 요구하는지 여부, PrivacyFields 요구한다면 어떤 값을 요구하는지\n`,
+        role: "user",
+        content: `HTML 코드를 보고 JSON 을 완성시켜 줘\n\n${html}\n\n{ \"IsPrivacyForm\": boolean,  \"PrivacyFields\": string[] }\n\nIsPrivacyForm 는 HTML 에 개인정보를 입력하는 요소가 있는지 유무, PrivacyFields는 개인정보 입력 요소가 있다면 어떤 값들을 요구하는지를 한국어로 나타내고 있어.`,
       },
     ],
     temperature: 1,
@@ -45,9 +38,10 @@ async function validatePrivacyForm(
   });
 
   try {
-    const raw = response?.data?.choices[0];
-    console.log(raw);
-    const obj = JSON.parse(raw.message.content);
+    const raw = response?.data?.choices[0]?.message?.content;
+    const jsonStartIdx = raw.indexOf("{");
+    const jsonEndIdx = raw.lastIndexOf("}");
+    const obj = JSON.parse(raw.substring(jsonStartIdx, jsonEndIdx + 1));
 
     return {
       isPrivacyForm: obj.IsPrivacyForm,

@@ -23,18 +23,20 @@ async function formInspectionService({
   const domainAndPath = `${url.hostname}${url.pathname}`;
   const items = await FormInspectionResult.findByDomainAndPath(domainAndPath);
 
-  // if (items.length > 0) {
-  //   const item = items[0];
-  //   if (differenceInDays(new Date(), new Date(item.AnalysisDate)) < 7) {
-  //     return plainToInstance(FormInspectionResDto, {
-  //       IsPrivacyForm: item.IsPrivacyForm,
-  //       PrivacyFields: item.PrivacyFields,
-  //     });
-  //   }
-  // }
+  if (items.length > 0) {
+    const item = items[0];
+    if (differenceInDays(new Date(), new Date(item.AnalysisDate)) < 7) {
+      return plainToInstance(FormInspectionResDto, {
+        IsPrivacyForm: item.IsPrivacyForm,
+        PrivacyFields: item.PrivacyFields,
+      });
+    } else {
+    }
+  }
 
   const { isPrivacyForm, privacyFields } = await validatePrivacyForm(html);
-  await FormInspectionResult.create({
+  await FormInspectionResult.upsert({
+    id: items[0] ? items[0].id : FormInspectionResult.generateUID(),
     Domain: url.hostname,
     DomainAndPath: domainAndPath,
     IsPrivacyForm: isPrivacyForm,

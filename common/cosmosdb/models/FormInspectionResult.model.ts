@@ -1,6 +1,7 @@
 import CosmosModel from "./CosmosModel";
 
 export interface FormInspectionResultType {
+  id: string;
   Domain: string;
   DomainAndPath: string;
   IsPrivacyForm: boolean;
@@ -9,6 +10,7 @@ export interface FormInspectionResultType {
 }
 
 export interface CreateFormInspectionResultParams {
+  id: string;
   Domain: string;
   DomainAndPath: string;
   IsPrivacyForm: boolean;
@@ -35,15 +37,16 @@ class FormInspectionResultModel extends CosmosModel {
     return response.resources as FormInspectionResultType[];
   }
 
-  async create({
+  async upsert({
+    id,
     Domain,
     DomainAndPath,
     IsPrivacyForm,
     AnalysisDate,
     PrivacyFields,
   }: CreateFormInspectionResultParams) {
-    return this.container.items.create({
-      id: this.generateUID(),
+    return this.container.items.upsert({
+      id,
       Domain,
       DomainAndPath,
       IsPrivacyForm,
