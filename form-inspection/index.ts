@@ -2,6 +2,9 @@ import { HttpRequest } from "@azure/functions";
 import { plainToInstance } from "class-transformer";
 import { validateOrReject } from "class-validator";
 import { differenceInDays } from "date-fns";
+import validatePrivacyForm, {
+  ValidatePrivacyFormResult,
+} from "../common/chatgpt/validatePrivacyForm";
 import FormInspectionResultModel from "../common/cosmosdb/models/FormInspectionResult.model";
 import ehr from "../common/utils/ehr";
 import { FormInspectionReqDto } from "./dtos/FormInspectionReq.dto";
@@ -12,29 +15,36 @@ async function formInspectionService({
   html,
 }: FormInspectionReqDto): Promise<FormInspectionResDto> {
   // 필요한 모델 초기화
-  const IntrospectResult = new FormInspectionResultModel();
-  await Promise.all([IntrospectResult.init()]);
+  const FormInspectionResult = new FormInspectionResultModel();
+  await Promise.all([FormInspectionResult.init()]);
 
   // 디비에 캐싱된 데이터가 있는지 확인
   const url = new URL(pageUrl);
   const domainAndPath = `${url.hostname}${url.pathname}`;
-  const items = await IntrospectResult.findByDomainAndPath(domainAndPath);
+  const items = await FormInspectionResult.findByDomainAndPath(domainAndPath);
 
-  if (items.length > 0) {
-    const item = items[0];
-    if (differenceInDays(new Date(), new Date(item.AnalysisDate)) < 7) {
-      return plainToInstance(FormInspectionResDto, {
-        IsPrivacyForm: item.IsPrivacyForm,
-        PrivacyFields: item.PrivacyFields,
-      });
-    }
-  }
+  // if (items.length > 0) {
+  //   const item = items[0];
+  //   if (differenceInDays(new Date(), new Date(item.AnalysisDate)) < 7) {
+  //     return plainToInstance(FormInspectionResDto, {
+  //       IsPrivacyForm: item.IsPrivacyForm,
+  //       PrivacyFields: item.PrivacyFields,
+  //     });
+  //   }
+  // }
 
-  // TODO ChatGPT 를 이용해서 해당 폼에 개인정보 입력 창이 있는지 물업보기
-  // TODO create() 써서 데이터 저장
+  const { isPrivacyForm, privacyFields } = await validatePrivacyForm(html);
+  await FormInspectionResult.create({
+    Domain: url.hostname,
+    DomainAndPath: domainAndPath,
+    IsPrivacyForm: isPrivacyForm,
+    AnalysisDate: new Date(),
+    PrivacyFields: privacyFields,
+  });
+
   return plainToInstance(FormInspectionResDto, {
-    IsPrivacyForm: false,
-    PrivacyFields: ["ChatGPT", "가 대답한", "값 줘야함"],
+    IsPrivacyForm: isPrivacyForm,
+    PrivacyFields: privacyFields,
   });
 }
 
