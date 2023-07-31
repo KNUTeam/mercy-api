@@ -30,7 +30,6 @@ async function formInspectionService({
         IsPrivacyForm: item.IsPrivacyForm,
         PrivacyFields: item.PrivacyFields,
       });
-    } else {
     }
   }
 
